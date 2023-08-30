@@ -3,6 +3,14 @@ import Customer from "../../../../domain/customer/entity/customer";
 import Address from "../../../../domain/customer/value-object/address";
 import CustomerModel from "./customer.model";
 import CustomerRepository from "./customer.repository";
+import EventDispatcher from "../../../../domain/@shared/event/event-dispatcher";
+import SendEmailWhenProductIsCreatedHandler
+  from "../../../../domain/product/event/handler/send-email-when-product-is-created.handler";
+import EnviaConsoleLog1Handler from "../../../../domain/customer/event/handler/envia-console-log1.handler";
+import EnviaConsoleLog2Handler from "../../../../domain/customer/event/handler/envia-console-log2.handler";
+import CustomerCreatedEvent from "../../../../domain/customer/event/customer-created.event";
+import EnviaConsoleLogHandler from "../../../../domain/customer/event/handler/envia-console-log.handler";
+import CustomerAddressChangedEvent from "../../../../domain/customer/event/customer-address-changed.event";
 
 describe("Customer repository test", () => {
   let sequelize: Sequelize;
@@ -109,4 +117,44 @@ describe("Customer repository test", () => {
     expect(customers).toContainEqual(customer1);
     expect(customers).toContainEqual(customer2);
   });
+
+  it("should call all handlers when a customer is created", async () => {
+    const eventDispatcher = new EventDispatcher();
+    const enviaConsoleLog1Handler = new EnviaConsoleLog1Handler();
+    const enviaConsoleLog2Handler = new EnviaConsoleLog2Handler();
+    const spyEvent1Handler = jest.spyOn(enviaConsoleLog1Handler, "handle");
+    const spyEvent2Handler = jest.spyOn(enviaConsoleLog2Handler, "handle");
+
+    const customerCreatedEvent = new CustomerCreatedEvent({
+      id: "123",
+      name: "John Customer"
+    });
+
+    eventDispatcher.register("CustomerCreatedEvent", enviaConsoleLog1Handler);
+    eventDispatcher.register("CustomerCreatedEvent", enviaConsoleLog2Handler);
+
+    eventDispatcher.notify(customerCreatedEvent);
+
+    expect(spyEvent1Handler).toHaveBeenCalled();
+    expect(spyEvent2Handler).toHaveBeenCalled();
+  });
+
+    it("should call handler when a customer address changed", async () => {
+        const eventDispatcher = new EventDispatcher();
+        const enviaConsoleLogHandler = new EnviaConsoleLogHandler();
+        const spyEventHandler = jest.spyOn(enviaConsoleLogHandler, "handle");
+
+        const customerAddressChangedEvent = new CustomerAddressChangedEvent({
+            id: "123",
+            name: "Alex Telles",
+            address: new Address("Street 2", 1, "Zipcode 3", "City 3")
+        });
+
+        eventDispatcher.register("CustomerAddressChangedEvent", enviaConsoleLogHandler);
+
+        eventDispatcher.notify(customerAddressChangedEvent);
+
+        expect(spyEventHandler).toHaveBeenCalled();
+    });
 });
+
